@@ -244,7 +244,7 @@ async function checkAnswers() {
   }
 }
 
-// AI Trợ giảng IELTS (Gọi qua Google Apps Script bảo mật & ổn định 100%)
+// AI Trợ giảng IELTS (Kết nối mượt mà tránh lỗi CORS với Google Apps Script)
 async function askGeminiAI(qId) {
   const inputEl = document.getElementById(`ai_ask_${qId}`);
   const responseBox = document.getElementById(`ai_response_${qId}`);
@@ -257,7 +257,7 @@ async function askGeminiAI(qId) {
   }
 
   responseBox.style.display = "block";
-  responseBox.innerHTML = "<i>⏳ Trợ giảng AI đang đọc bài và soạn lời giải thích...</i>";
+  responseBox.innerHTML = "<i>⏳ Trợ giảng AI đang đọc bài và phân tích...</i>";
 
   const qDiv = document.getElementById(qId);
   const questionContent = qDiv ? qDiv.innerText : "";
@@ -273,6 +273,7 @@ ${questionContent}
 "${userQuestion}"`;
 
   try {
+    // Tránh lỗi CORS bằng cách gửi payload dạng text/plain và xử lý JSON response từ Google Apps Script
     const res = await fetch(IELTS_CONFIG.GOOGLE_SCRIPT_URL, {
       method: "POST",
       body: JSON.stringify({
@@ -285,10 +286,10 @@ ${questionContent}
     if (data && data.reply) {
       responseBox.innerHTML = `<b>🤖 Trợ giảng AI:</b><br>${data.reply.replace(/\n/g, "<br>")}`;
     } else {
-      responseBox.innerHTML = `⚠️ <b>Trợ giảng AI:</b> Đã nhận câu hỏi nhưng máy chủ phản hồi trống. Em thử lại nhé!`;
+      responseBox.innerHTML = `⚠️ <b>Trợ giảng AI:</b> Đã nhận câu hỏi nhưng phản hồi trống. Em bấm gửi lại nhé!`;
     }
   } catch (err) {
-    console.warn("Lỗi gọi Apps Script:", err);
-    responseBox.innerHTML = `⚠️ <b>Trợ giảng AI:</b> Không thể kết nối đến Google Apps Script. Vui lòng kiểm tra lại kết nối mạng!`;
+    console.warn("Lỗi kết nối Apps Script:", err);
+    responseBox.innerHTML = `⚠️ <b>Trợ giảng AI:</b> Lỗi kết nối (${err.message}). Em thử lại sau 5 giây nhé!`;
   }
 }
