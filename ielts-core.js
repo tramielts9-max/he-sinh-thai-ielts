@@ -7,13 +7,13 @@
 
 // CẤU HÌNH TOÀN CỤC DÙNG CHUNG CHO TẤT CẢ CÁC BÀI TẬP
 const IELTS_CONFIG = {
-  // Mã API Key Gemini mới nhất của bạn
+  // Mã API Key Gemini chính xác của bạn
   GEMINI_API_KEY: "AQ.Ab8RN6IKdQqiJY2S-6JgFEBihUGY2WXCumX9XHpg6bfU06JqcA",
   
   // Link Web App Google Apps Script nhận bảng điểm
   GOOGLE_SCRIPT_URL: "https://script.google.com/macros/s/AKfycby7vRFXq_YhjIEq4kN-8NLRFw2sj-7VkVEmTw6IkNkPmidEPnPtxtNkSE-HKfn5mAPfbw/exec",
   
-  // Danh sách các model chính thức của Google Gemini
+  // Danh sách model Google Gemini chuẩn
   MODELS: ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash']
 };
 
@@ -124,7 +124,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  // Tự động bật timer khi học sinh tương tác
+  // Tự động bật timer khi tương tác
   document.body.addEventListener('click', function() {
     if (!isTimerRunning && seconds === 0) {
       startTimer();
@@ -250,7 +250,7 @@ async function checkAnswers() {
   }
 }
 
-// AI Trợ giảng IELTS
+// AI Trợ giảng IELTS (Gọi trực tiếp chuẩn Browser Fetch không bị lỗi Preflight Header)
 async function askGeminiAI(qId) {
   const inputEl = document.getElementById(`ai_ask_${qId}`);
   const responseBox = document.getElementById(`ai_response_${qId}`);
@@ -279,17 +279,14 @@ ${questionContent}
 "${userQuestion}"`;
 
   let isSuccess = false;
-  let errorDetail = "";
+  let lastErrorMsg = "";
 
   for (const model of IELTS_CONFIG.MODELS) {
     try {
       const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${IELTS_CONFIG.GEMINI_API_KEY}`;
       const res = await fetch(endpoint, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-goog-api-key": IELTS_CONFIG.GEMINI_API_KEY
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }]
         })
@@ -297,7 +294,7 @@ ${questionContent}
 
       const data = await res.json();
       if (data.error) {
-        errorDetail = data.error.message || JSON.stringify(data.error);
+        lastErrorMsg = data.error.message || JSON.stringify(data.error);
         console.warn(`Model ${model} error:`, data.error);
         continue;
       }
@@ -309,12 +306,12 @@ ${questionContent}
         break;
       }
     } catch (err) {
-      errorDetail = err.message;
+      lastErrorMsg = err.message;
       console.warn(`Fetch error for ${model}:`, err);
     }
   }
 
   if (!isSuccess) {
-    responseBox.innerHTML = `⚠️ <b>Trợ giảng AI tạm thời gián đoạn:</b> ${errorDetail || "Vui lòng bấm 'Gửi AI' lại sau vài giây nhé!"}`;
+    responseBox.innerHTML = `⚠️ <b>Trợ giảng AI:</b> ${lastErrorMsg || "Máy chủ AI đang bận trong giây lát. Em thử bấm 'Gửi AI' lại nhé!"}`;
   }
 }
