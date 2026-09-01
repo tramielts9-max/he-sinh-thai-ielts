@@ -247,7 +247,24 @@ async function checkAnswers() {
   }
 }
 
-// AI Trợ giảng IELTS (Gửi yêu cầu qua Apps Script với danh sách model gemini-3.7-flash, gemini-3.6-flash, gemini-3.5-flash-lite)
+// BỘ CHUYỂN ĐỔI FORMAT MARKDOWN SANG HTML ĐẸP MẮT (In đậm, Tô vàng, Tô xanh từ khóa, Ngắt dòng)
+function formatMarkdownToHTML(text) {
+  if (!text) return "";
+  
+  return text
+    // 1. Chuyển đổi **in đậm** -> <strong>in đậm</strong>
+    .replace(/\*\*(.*?)\*\*/g, '<strong style="color: #0f172a; font-weight: 700;">$1</strong>')
+    // 2. Chuyển đổi ==tô vàng== -> <mark>
+    .replace(/==(.*?)==/g, '<mark style="background-color: #fef08a; padding: 2px 5px; border-radius: 4px; font-weight: 600; color: #854d0e;">$1</mark>')
+    // 3. Chuyển đổi [kw]từ khóa[/kw] -> Thẻ xanh lá cây đại diện từ khóa IELTS
+    .replace(/\[kw\](.*?)\[\/kw\]/g, '<span style="background-color: #bbf7d0; color: #14532d; padding: 2px 6px; border-radius: 4px; font-weight: 700;">$1</span>')
+    // 4. Định dạng danh sách gạch đầu dòng (* item hoặc - item)
+    .replace(/^\s*[\-\*]\s+(.*)$/gm, '<li style="margin-left: 15px; margin-bottom: 4px;">$1</li>')
+    // 5. Ngắt dòng chuẩn HTML
+    .replace(/\n/g, '<br>');
+}
+
+// AI Trợ giảng IELTS (Xử lý Format Đẹp mắt)
 async function askGeminiAI(qId) {
   const inputEl = document.getElementById(`ai_ask_${qId}`);
   const responseBox = document.getElementById(`ai_response_${qId}`);
@@ -265,11 +282,16 @@ async function askGeminiAI(qId) {
   const qDiv = document.getElementById(qId);
   const questionContent = qDiv ? qDiv.innerText : "";
 
-  const prompt = `Bạn là giáo viên dạy IELTS Reading kỳ cựu và tận tâm.
-Nhiệm vụ: Giải thích thắc mắc của học viên một cách ngắn gọn, súc tích, dễ hiểu bằng tiếng Việt.
-Chỉ ra vì sao đáp án đúng dựa trên bài đọc.
+  const prompt = `Bạn là một giáo viên dạy IELTS Reading kỳ cựu, tận tâm và chuyên nghiệp.
+Nhiệm vụ: Giải thích thắc mắc của học viên một cách ngắn gọn, mạch lạc, dễ hiểu bằng tiếng Việt.
 
-[THÔNG TIN CÂU HỎI]:
+YÊU CẦU ĐỊNH DẠNG (BẮT BUỘC):
+- Dùng **từ khóa** để IN ĐẬM các từ quan trọng trong câu hỏi và bài đọc.
+- Dùng [kw]từ khóa đối chiếu[/kw] để TÔ XANH LÁ CÂY các từ đồng nghĩa (synonyms) / paraphrase giữa câu hỏi và bài đọc.
+- Dùng ==nội dung cốt lõi== để TÔ VÀNG đoạn văn chứa bằng chứng.
+- Trình bày dạng các dòng ngắn gọn, có gạch đầu dòng rõ ràng.
+
+[CÂU HỎI & ĐÁP ÁN]:
 ${questionContent}
 
 [THẮC MẮC CỦA HỌC VIÊN]:
@@ -287,7 +309,8 @@ ${questionContent}
 
     const data = await res.json();
     if (data && data.reply) {
-      responseBox.innerHTML = `<b>🤖 Trợ giảng AI:</b><br>${data.reply.replace(/\n/g, "<br>")}`;
+      const htmlFormatted = formatMarkdownToHTML(data.reply);
+      responseBox.innerHTML = `<div style="line-height: 1.6; color: #334155;"><b style="color: #0284c7; font-size: 13.5px;">🤖 Trợ giảng AI:</b><br><br>${htmlFormatted}</div>`;
     } else {
       responseBox.innerHTML = `⚠️ <b>Trợ giảng AI:</b> Phản hồi từ máy chủ: ${data.error || "Trống"}`;
     }
