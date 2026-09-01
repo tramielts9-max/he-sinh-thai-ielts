@@ -7,14 +7,8 @@
 
 // CẤU HÌNH TOÀN CỤC DÙNG CHUNG CHO TẤT CẢ CÁC BÀI TẬP
 const IELTS_CONFIG = {
-  // Mã API Key Gemini chính xác của bạn
-  GEMINI_API_KEY: "AQ.Ab8RN6IKdQqiJY2S-6JgFEBihUGY2WXCumX9XHpg6bfU06JqcA",
-  
-  // Link Web App Google Apps Script nhận bảng điểm
-  GOOGLE_SCRIPT_URL: "https://script.google.com/macros/s/AKfycby7vRFXq_YhjIEq4kN-8NLRFw2sj-7VkVEmTw6IkNkPmidEPnPtxtNkSE-HKfn5mAPfbw/exec",
-  
-  // Danh sách model Google Gemini chuẩn
-  MODELS: ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash']
+  // Đường link Web App Google Apps Script nhận điểm và xử lý AI của bạn
+  GOOGLE_SCRIPT_URL: "https://script.google.com/macros/s/AKfycby7vRFXq_YhjIEq4kN-8NLRFw2sj-7VkVEmTw6IkNkPmidEPnPtxtNkSE-HKfn5mAPfbw/exec"
 };
 
 // Quản lý đồng hồ bấm giờ
@@ -232,8 +226,8 @@ async function checkAnswers() {
       await fetch(IELTS_CONFIG.GOOGLE_SCRIPT_URL, {
         method: "POST",
         mode: "no-cors",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          action: "submit_score",
           testTitle: window.TEST_DATA.title || document.title,
           studentName: studentName,
           studentEmail: studentEmail,
@@ -250,7 +244,7 @@ async function checkAnswers() {
   }
 }
 
-// AI Trợ giảng IELTS (Gọi trực tiếp chuẩn Browser Fetch không bị lỗi Preflight Header)
+// AI Trợ giảng IELTS (Gọi qua Google Apps Script bảo mật & ổn định 100%)
 async function askGeminiAI(qId) {
   const inputEl = document.getElementById(`ai_ask_${qId}`);
   const responseBox = document.getElementById(`ai_response_${qId}`);
@@ -263,7 +257,7 @@ async function askGeminiAI(qId) {
   }
 
   responseBox.style.display = "block";
-  responseBox.innerHTML = "<i>⏳ Trợ giảng AI đang đọc bài và phân tích...</i>";
+  responseBox.innerHTML = "<i>⏳ Trợ giảng AI đang đọc bài và soạn lời giải thích...</i>";
 
   const qDiv = document.getElementById(qId);
   const questionContent = qDiv ? qDiv.innerText : "";
@@ -278,40 +272,23 @@ ${questionContent}
 [THẮC MẮC CỦA HỌC VIÊN]:
 "${userQuestion}"`;
 
-  let isSuccess = false;
-  let lastErrorMsg = "";
+  try {
+    const res = await fetch(IELTS_CONFIG.GOOGLE_SCRIPT_URL, {
+      method: "POST",
+      body: JSON.stringify({
+        action: "ask_ai",
+        prompt: prompt
+      })
+    });
 
-  for (const model of IELTS_CONFIG.MODELS) {
-    try {
-      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${IELTS_CONFIG.GEMINI_API_KEY}`;
-      const res = await fetch(endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }]
-        })
-      });
-
-      const data = await res.json();
-      if (data.error) {
-        lastErrorMsg = data.error.message || JSON.stringify(data.error);
-        console.warn(`Model ${model} error:`, data.error);
-        continue;
-      }
-
-      if (data.candidates && data.candidates[0] && data.candidates[0].content) {
-        const aiReply = data.candidates[0].content.parts[0].text;
-        responseBox.innerHTML = `<b>🤖 Trợ giảng AI:</b><br>${aiReply.replace(/\n/g, "<br>")}`;
-        isSuccess = true;
-        break;
-      }
-    } catch (err) {
-      lastErrorMsg = err.message;
-      console.warn(`Fetch error for ${model}:`, err);
+    const data = await res.json();
+    if (data && data.reply) {
+      responseBox.innerHTML = `<b>🤖 Trợ giảng AI:</b><br>${data.reply.replace(/\n/g, "<br>")}`;
+    } else {
+      responseBox.innerHTML = `⚠️ <b>Trợ giảng AI:</b> Đã nhận câu hỏi nhưng máy chủ phản hồi trống. Em thử lại nhé!`;
     }
-  }
-
-  if (!isSuccess) {
-    responseBox.innerHTML = `⚠️ <b>Trợ giảng AI:</b> ${lastErrorMsg || "Máy chủ AI đang bận trong giây lát. Em thử bấm 'Gửi AI' lại nhé!"}`;
+  } catch (err) {
+    console.warn("Lỗi gọi Apps Script:", err);
+    responseBox.innerHTML = `⚠️ <b>Trợ giảng AI:</b> Không thể kết nối đến Google Apps Script. Vui lòng kiểm tra lại kết nối mạng!`;
   }
 }
