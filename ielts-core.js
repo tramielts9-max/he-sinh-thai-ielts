@@ -7,13 +7,13 @@
 
 // CẤU HÌNH TOÀN CỤC DÙNG CHUNG CHO TẤT CẢ CÁC BÀI TẬP
 const IELTS_CONFIG = {
-  // Thay API Key của bạn ở đây (Chỉ cần sửa 1 lần cho toàn bộ 100+ bài tập)
-  GEMINI_API_KEY: "AQ.Ab8RN6KmH8YxwB_bW34ce9ue6gIZOdAejgdglPu2M4NcKLlQKQ",
+  // Mã API Key Gemini mới nhất của bạn
+  GEMINI_API_KEY: "AQ.Ab8RN6IKdQqiJY2S-6JgFEBihUGY2WXCumX9XHpg6bfU06JqcA",
   
   // Link Web App Google Apps Script nhận bảng điểm
   GOOGLE_SCRIPT_URL: "https://script.google.com/macros/s/AKfycby7vRFXq_YhjIEq4kN-8NLRFw2sj-7VkVEmTw6IkNkPmidEPnPtxtNkSE-HKfn5mAPfbw/exec",
   
-  // Danh sách các model chính thức của Google Gemini (Tự động fallback nếu 1 model bận)
+  // Danh sách các model chính thức của Google Gemini
   MODELS: ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash']
 };
 
@@ -29,7 +29,6 @@ function updateTimerDisplay() {
   const timerDisplay = document.getElementById('timerDisplay');
   if (timerDisplay) {
     timerDisplay.innerText = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
-    // Cảnh báo nếu làm quá 20 phút
     if (mins >= 20) {
       timerDisplay.classList.add('timer-overtime');
     }
@@ -125,7 +124,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  // Tự động bật timer khi học sinh gõ chữ vào bài
+  // Tự động bật timer khi học sinh tương tác
   document.body.addEventListener('click', function() {
     if (!isTimerRunning && seconds === 0) {
       startTimer();
@@ -186,7 +185,7 @@ async function checkAnswers() {
     let isCorrect = false;
     const expectedAns = answers[qKey];
 
-    // 1. Dạng Trắc nghiệm (Radio: TRUE/FALSE/NOT GIVEN, YES/NO/NOT GIVEN, A/B/C/D)
+    // 1. Dạng Trắc nghiệm (Radio)
     const radioSelected = qDiv.querySelector(`input[name="${qKey}"]:checked`);
     const textInput = document.getElementById(`${qKey}_input`);
 
@@ -194,7 +193,7 @@ async function checkAnswers() {
       userVal = radioSelected.value.trim();
       isCorrect = (userVal.toUpperCase() === expectedAns.toUpperCase());
     } else if (textInput) {
-      // 2. Dạng Điền từ (Input text / Flowchart / Summary)
+      // 2. Dạng Điền từ
       userVal = textInput.value.trim();
       const cleanUserVal = userVal.toLowerCase().replace(/\s+/g, ' ');
 
@@ -251,7 +250,7 @@ async function checkAnswers() {
   }
 }
 
-// AI Trợ giảng IELTS (Tự động fallback qua các model)
+// AI Trợ giảng IELTS
 async function askGeminiAI(qId) {
   const inputEl = document.getElementById(`ai_ask_${qId}`);
   const responseBox = document.getElementById(`ai_response_${qId}`);
@@ -264,14 +263,14 @@ async function askGeminiAI(qId) {
   }
 
   responseBox.style.display = "block";
-  responseBox.innerHTML = "<i>⏳ Trợ giảng AI đang đọc bài và soạn lời giải thích...</i>";
+  responseBox.innerHTML = "<i>⏳ Trợ giảng AI đang đọc bài và phân tích...</i>";
 
   const qDiv = document.getElementById(qId);
   const questionContent = qDiv ? qDiv.innerText : "";
 
   const prompt = `Bạn là giáo viên dạy IELTS Reading kỳ cựu và tận tâm.
 Nhiệm vụ: Giải thích thắc mắc của học viên một cách ngắn gọn, súc tích, dễ hiểu bằng tiếng Việt.
-Chỉ ra vì sao câu trả lời của học viên sai hoặc đúng dựa trên văn bản bài đọc.
+Chỉ ra vì sao đáp án đúng dựa trên bài đọc.
 
 [THÔNG TIN CÂU HỎI]:
 ${questionContent}
@@ -280,13 +279,17 @@ ${questionContent}
 "${userQuestion}"`;
 
   let isSuccess = false;
+  let errorDetail = "";
 
   for (const model of IELTS_CONFIG.MODELS) {
     try {
       const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${IELTS_CONFIG.GEMINI_API_KEY}`;
       const res = await fetch(endpoint, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": IELTS_CONFIG.GEMINI_API_KEY
+        },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }]
         })
@@ -294,7 +297,8 @@ ${questionContent}
 
       const data = await res.json();
       if (data.error) {
-        console.warn(`Model ${model} báo lỗi:`, data.error);
+        errorDetail = data.error.message || JSON.stringify(data.error);
+        console.warn(`Model ${model} error:`, data.error);
         continue;
       }
 
@@ -305,11 +309,12 @@ ${questionContent}
         break;
       }
     } catch (err) {
-      console.warn(`Lỗi kết nối model ${model}:`, err);
+      errorDetail = err.message;
+      console.warn(`Fetch error for ${model}:`, err);
     }
   }
 
   if (!isSuccess) {
-    responseBox.innerHTML = "⚠️ Máy chủ AI đang bận trong giây lát. Em thử bấm 'Gửi AI' lại nhé!";
+    responseBox.innerHTML = `⚠️ <b>Trợ giảng AI tạm thời gián đoạn:</b> ${errorDetail || "Vui lòng bấm 'Gửi AI' lại sau vài giây nhé!"}`;
   }
 }
