@@ -247,53 +247,7 @@ async function checkAnswers() {
   }
 }
 
-// BỘ CHUYỂN ĐỔI TOÀN DIỆN CÁC KÝ TỰ MARKDOWN / LATEX SANG HTML ĐẸP MẮT
-function formatMarkdownToHTML(text) {
-  if (!text) return "";
-  
-  let formatted = text;
-
-  // 1. Dọn dẹp ký tự mũi tên LaTeX ($\rightarrow$, \rightarrow) -> ➔
-  formatted = formatted
-    .replace(/\$\\rightarrow\$/g, '➔')
-    .replace(/\\rightarrow/g, '➔')
-    .replace(/\$\\Rightarrow\$/g, '➔')
-    .replace(/\\Rightarrow/g, '➔');
-
-  // 2. Chuyển đổi Tiêu đề (### Heading, ## Heading, # Heading)
-  formatted = formatted
-    .replace(/^### (.*$)/gim, '<h4 style="color: #0369a1; margin: 12px 0 6px 0; font-size: 14px; font-weight: 700;">$1</h4>')
-    .replace(/^## (.*$)/gim, '<h3 style="color: #0f172a; margin: 14px 0 6px 0; font-size: 15px; font-weight: 700;">$1</h3>')
-    .replace(/^# (.*$)/gim, '<h2 style="color: #0f172a; margin: 16px 0 8px 0; font-size: 16px; font-weight: 700;">$1</h2>');
-
-  // 3. Chuyển đổi Trích dẫn Trích đoạn (> Quote)
-  formatted = formatted.replace(/^\>\s*(.*$)/gim, '<blockquote style="background: #f8fafc; border-left: 3px solid #0284c7; margin: 8px 0; padding: 8px 12px; font-style: italic; color: #334155; border-radius: 0 4px 4px 0;">$1</blockquote>');
-
-  // 4. Chuyển đổi **In đậm** -> <strong>In đậm</strong>
-  formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong style="color: #0f172a; font-weight: 700;">$1</strong>');
-
-  // 5. Chuyển đổi ==Tô vàng== -> <mark>
-  formatted = formatted.replace(/==(.*?)==/g, '<mark style="background-color: #fef08a; padding: 2px 5px; border-radius: 4px; font-weight: 600; color: #854d0e;">$1</mark>');
-
-  // 6. Chuyển đổi [kw]từ khóa[/kw] -> Thẻ xanh lá cây
-  formatted = formatted.replace(/\[kw\](.*?)\[\/kw\]/g, '<span style="background-color: #bbf7d0; color: #14532d; padding: 2px 6px; border-radius: 4px; font-weight: 700;">$1</span>');
-
-  // 7. Chuyển đổi code (`code`)
-  formatted = formatted.replace(/`([^`]+)`/g, '<code style="background: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 13px; color: #0f172a;">$1</code>');
-
-  // 8. Chuyển đổi Gạch ngang đường kẻ (---)
-  formatted = formatted.replace(/^---$/gim, '<hr style="border: none; border-top: 1px solid #e2e8f0; margin: 12px 0;">');
-
-  // 9. Chuyển đổi Gạch đầu dòng (* item hoặc - item)
-  formatted = formatted.replace(/^\s*[\-\*]\s+(.*)$/gim, '<div style="margin-left: 10px; margin-bottom: 4px;">• $1</div>');
-
-  // 10. Chuyển dòng xuống dòng chuẩn HTML
-  formatted = formatted.replace(/\n{2,}/g, '<br><br>').replace(/\n/g, '<br>');
-
-  return formatted;
-}
-
-// AI Trợ giảng IELTS (Xử lý Format Đẹp mắt)
+// AI Trợ giảng IELTS (Bản ổn định ban đầu - Hiển thị phản hồi từ Apps Script)
 async function askGeminiAI(qId) {
   const inputEl = document.getElementById(`ai_ask_${qId}`);
   const responseBox = document.getElementById(`ai_response_${qId}`);
@@ -311,16 +265,8 @@ async function askGeminiAI(qId) {
   const qDiv = document.getElementById(qId);
   const questionContent = qDiv ? qDiv.innerText : "";
 
-  const prompt = `Bạn là một giáo viên dạy IELTS Reading kỳ cựu, tận tâm và chuyên nghiệp.
-Nhiệm vụ: Giải thích thắc mắc của học viên một cách ngắn gọn, mạch lạc, dễ hiểu bằng tiếng Việt.
-
-YÊU CẦU ĐỊNH DẠNG (BẮT BUỘC):
-- Dùng **từ khóa** để IN ĐẬM các từ quan trọng trong câu hỏi và bài đọc.
-- Dùng [kw]từ khóa đối chiếu[/kw] để TÔ XANH LÁ CÂY các từ đồng nghĩa (synonyms) / paraphrase giữa câu hỏi và bài đọc.
-- Dùng ==nội dung cốt lõi== để TÔ VÀNG đoạn văn chứa bằng chứng.
-- Dùng > cho các trích dẫn câu trong bài đọc.
-- KHÔNG DÙNG ký tự LaTeX như $\\rightarrow$. Hãy dùng dấu mũi tên -> bình thường.
-- Trình bày gạch đầu dòng rõ ràng, mạch lạc.
+  const prompt = `Bạn là một giáo viên dạy IELTS Reading kỳ cựu và tận tâm.
+Nhiệm vụ: Giải thích ngắn gọn, súc tích, dễ hiểu bằng tiếng Việt thắc mắc của học viên.
 
 [CÂU HỎI & ĐÁP ÁN]:
 ${questionContent}
@@ -340,8 +286,8 @@ ${questionContent}
 
     const data = await res.json();
     if (data && data.reply) {
-      const htmlFormatted = formatMarkdownToHTML(data.reply);
-      responseBox.innerHTML = `<div style="line-height: 1.6; color: #334155;"><b style="color: #0284c7; font-size: 13.5px;">🤖 Trợ giảng AI:</b><br><br>${htmlFormatted}</div>`;
+      const cleanReply = data.reply.replace(/\n/g, "<br>");
+      responseBox.innerHTML = `<b>🤖 Trợ giảng AI:</b><br>${cleanReply}`;
     } else {
       responseBox.innerHTML = `⚠️ <b>Trợ giảng AI:</b> Phản hồi từ máy chủ: ${data.error || "Trống"}`;
     }
