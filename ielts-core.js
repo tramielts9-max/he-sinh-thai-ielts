@@ -7,6 +7,9 @@
 
 // CẤU HÌNH TOÀN CỤC DÙNG CHUNG CHO TẤT CẢ CÁC BÀI TẬP
 const IELTS_CONFIG = {
+  // Key API Gemini của bạn
+  GEMINI_API_KEY: "AQ.Ab8RN6LwV10cN4CAoL0C7zUMUKvb8nFfPZ1rWdSp3Dg2x1AMPg",
+  
   // Đường link Web App Google Apps Script nhận điểm và xử lý AI của bạn
   GOOGLE_SCRIPT_URL: "https://script.google.com/macros/s/AKfycby7vRFXq_YhjIEq4kN-8NLRFw2sj-7VkVEmTw6IkNkPmidEPnPtxtNkSE-HKfn5mAPfbw/exec"
 };
@@ -244,7 +247,7 @@ async function checkAnswers() {
   }
 }
 
-// AI Trợ giảng IELTS (Kết nối mượt mà tránh lỗi CORS với Google Apps Script)
+// AI Trợ giảng IELTS (Gửi tới Google Apps Script với key API của bạn)
 async function askGeminiAI(qId) {
   const inputEl = document.getElementById(`ai_ask_${qId}`);
   const responseBox = document.getElementById(`ai_response_${qId}`);
@@ -257,7 +260,7 @@ async function askGeminiAI(qId) {
   }
 
   responseBox.style.display = "block";
-  responseBox.innerHTML = "<i>⏳ Trợ giảng AI đang đọc bài và phân tích...</i>";
+  responseBox.innerHTML = "<i>⏳ Trợ giảng AI đang đọc bài và soạn lời giải thích...</i>";
 
   const qDiv = document.getElementById(qId);
   const questionContent = qDiv ? qDiv.innerText : "";
@@ -273,12 +276,12 @@ ${questionContent}
 "${userQuestion}"`;
 
   try {
-    // Tránh lỗi CORS bằng cách gửi payload dạng text/plain và xử lý JSON response từ Google Apps Script
     const res = await fetch(IELTS_CONFIG.GOOGLE_SCRIPT_URL, {
       method: "POST",
       body: JSON.stringify({
         action: "ask_ai",
-        prompt: prompt
+        prompt: prompt,
+        apiKey: IELTS_CONFIG.GEMINI_API_KEY
       })
     });
 
@@ -286,10 +289,10 @@ ${questionContent}
     if (data && data.reply) {
       responseBox.innerHTML = `<b>🤖 Trợ giảng AI:</b><br>${data.reply.replace(/\n/g, "<br>")}`;
     } else {
-      responseBox.innerHTML = `⚠️ <b>Trợ giảng AI:</b> Đã nhận câu hỏi nhưng phản hồi trống. Em bấm gửi lại nhé!`;
+      responseBox.innerHTML = `⚠️ <b>Trợ giảng AI:</b> Phản hồi từ máy chủ: ${data.error || "Trống"}`;
     }
   } catch (err) {
-    console.warn("Lỗi kết nối Apps Script:", err);
-    responseBox.innerHTML = `⚠️ <b>Trợ giảng AI:</b> Lỗi kết nối (${err.message}). Em thử lại sau 5 giây nhé!`;
+    console.warn("Lỗi kết nối:", err);
+    responseBox.innerHTML = `⚠️ <b>Trợ giảng AI:</b> Lỗi kết nối đến Google Apps Script. Vui lòng thử lại!`;
   }
 }
