@@ -247,7 +247,7 @@ async function checkAnswers() {
   }
 }
 
-// AI Trợ giảng IELTS (Gửi tới Google Apps Script với key API của bạn)
+// AI Trợ giảng IELTS (Gửi yêu cầu qua Apps Script với danh sách model gemini-3.7-flash, gemini-3.6-flash, gemini-3.5-flash-lite)
 async function askGeminiAI(qId) {
   const inputEl = document.getElementById(`ai_ask_${qId}`);
   const responseBox = document.getElementById(`ai_response_${qId}`);
