@@ -61,7 +61,7 @@ function initTextHighlighting() {
 
   const btnDoHighlight = document.getElementById('btnDoHighlight');
   const btnRemoveHighlight = document.getElementById('btnRemoveHighlight');
-  const passageBox = document.getElementById('passageBox');
+  const container = document.querySelector('.container');
 
   if (!passageBox) return;
 
@@ -95,7 +95,8 @@ function initTextHighlighting() {
     // Nếu bôi đen chữ mới trong khung bài đọc -> hiện nút Highlight
     if (selectedText.length > 0 && selection.rangeCount > 0) {
       const range = selection.getRangeAt(0);
-      if (passageBox.contains(range.commonAncestorContainer)) {
+      // Cho phép highlight cả 2 cột (trừ khi đang bôi đen trong ô gõ chữ input/textarea)
+if (container && container.contains(range.commonAncestorContainer) && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
         currentRange = range.cloneRange();
         const rect = range.getBoundingClientRect();
         hlPopup.style.left = `${rect.left + rect.width / 2 - 45}px`;
